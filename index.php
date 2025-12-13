@@ -19,7 +19,7 @@ $views = $data['views'];
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>@Rence141 // Portfolio</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -30,7 +30,7 @@ $views = $data['views'];
             --accent: #a8b2d1; 
             --glass-bg: rgba(20, 20, 20, 0.65);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body {
             background-color: #050505;
@@ -41,6 +41,8 @@ $views = $data['views'];
             display: flex;
             align-items: center;
             justify-content: center;
+            /* Hide cursor only on non-touch devices */
+            cursor: none; 
         }
 
         /* --- BACKGROUND LAYER --- */
@@ -104,7 +106,10 @@ $views = $data['views'];
         #cursor.hovered { width: 50px; height: 50px; background: rgba(255, 255, 255, 0.2); }
 
         .card {
-            width: 380px; padding: 30px 25px;
+            /* MOBILE FIX: Use percentage width with a max-limit */
+            width: 90%; 
+            max-width: 380px; 
+            padding: 30px 25px;
             background: var(--glass-bg);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -121,7 +126,7 @@ $views = $data['views'];
 
         .username { font-size: 1.8rem; font-weight: 700; margin-bottom: 5px; }
         
-        .badges { margin-bottom: 15px; display: flex; justify-content: center; gap: 8px; }
+        .badges { margin-bottom: 15px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
         .badge {
             background: rgba(255,255,255,0.05); padding: 4px 8px;
             border-radius: 6px; font-size: 0.7rem; color: var(--accent);
@@ -129,7 +134,7 @@ $views = $data['views'];
         }
 
         .links { display: flex; justify-content: center; gap: 20px; margin-bottom: 25px; margin-top: 15px;}
-        .links a { color: var(--accent); font-size: 1.3rem; transition: 0.3s; }
+        .links a { color: var(--accent); font-size: 1.3rem; transition: 0.3s; padding: 5px; }
         .links a:hover { color: #fff; transform: translateY(-3px); }
 
         .player-ui {
@@ -137,15 +142,17 @@ $views = $data['views'];
             border: 1px solid rgba(255,255,255,0.05);
         }
         .progress-container {
-            width: 100%; height: 4px; background: rgba(255,255,255,0.1);
-            border-radius: 2px; margin: 10px 0; overflow: hidden;
+            width: 100%; height: 10px; /* Thicker for mobile touch */
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px; margin: 10px 0; overflow: hidden;
+            display: flex; align-items: center;
         }
         .progress-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.1s linear; }
         
-        .controls { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 10px;}
-        .ctrl-btn { background: none; border: none; color: #ccc; font-size: 1rem; transition: 0.2s; }
+        .controls { display: flex; align-items: center; justify-content: center; gap: 25px; margin-bottom: 10px;}
+        .ctrl-btn { background: none; border: none; color: #ccc; font-size: 1.2rem; transition: 0.2s; padding: 5px; }
         .ctrl-btn:hover { color: #fff; transform: scale(1.2); }
-        .play-btn { font-size: 1.4rem; color: #fff; }
+        .play-btn { font-size: 1.6rem; color: #fff; }
 
         /* --- VOLUME CONTROL --- */
         .volume-control {
@@ -158,14 +165,15 @@ $views = $data['views'];
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none; appearance: none;
-            width: 10px; height: 10px; border-radius: 50%; 
-            background: var(--accent); cursor: none;
+            width: 12px; height: 12px; border-radius: 50%; 
+            background: var(--accent); cursor: pointer;
         }
 
         .lyrics-box {
             height: 50px; font-size: 0.7rem; color: rgba(255,255,255,0.6);
             font-style: italic; margin-top: 10px; overflow: hidden;
             display: flex; align-items: center; justify-content: center;
+            padding: 0 5px;
         }
 
         .footer {
@@ -179,8 +187,24 @@ $views = $data['views'];
             display: flex; align-items: center; justify-content: center; flex-direction: column;
             cursor: pointer; transition: opacity 0.8s;
         }
-        .click-text { letter-spacing: 4px; animation: breathe 2s infinite; }
+        .click-text { letter-spacing: 4px; animation: breathe 2s infinite; text-align: center; margin: 0 10px; }
         @keyframes breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+        /* --- MOBILE MEDIA QUERY --- */
+        @media (max-width: 768px) {
+            body { cursor: auto; } /* Restore default cursor */
+            #cursor { display: none; } /* Hide custom cursor */
+            * { cursor: auto !important; }
+            
+            .card { width: 88%; padding: 25px 20px; }
+            .links a { font-size: 1.5rem; }
+            .ctrl-btn { font-size: 1.4rem; }
+            .play-btn { font-size: 1.8rem; }
+            .click-text { font-size: 0.9rem; letter-spacing: 2px; }
+            
+            /* Make volume slider thumb bigger for touch */
+            input[type=range]::-webkit-slider-thumb { width: 15px; height: 15px; }
+        }
 
     </style>
 </head>
@@ -190,7 +214,7 @@ $views = $data['views'];
 
     <div id="overlay">
         <div class="click-text">[ INITIALIZING... ]</div>
-        <div style="font-size: 0.8rem; margin-top: 10px; opacity: 0.5;">Click to Access System</div>
+        <div style="font-size: 0.8rem; margin-top: 10px; opacity: 0.5;">Tap to Access System</div>
     </div>
 
     <img id="bg-image" class="bg-layer" src="" alt="">
@@ -330,7 +354,10 @@ $views = $data['views'];
         function createRainDroplets() {
             const container = document.getElementById('rain-window');
             container.innerHTML = '';
-            for(let i=0; i<80; i++) {
+            // Reduced droplet count for mobile performance
+            const dropCount = window.innerWidth < 768 ? 40 : 80;
+            
+            for(let i=0; i<dropCount; i++) {
                 const drop = document.createElement('div');
                 drop.classList.add('droplet');
                 drop.style.left = Math.random() * 100 + 'vw';
@@ -365,9 +392,13 @@ $views = $data['views'];
             audio.src = track.audio;
             triggerEffect(track.effect);
             
+            // Only attempt play if user has interacted (will happen via overlay click)
             audio.play().then(() => {
                 document.getElementById('play-btn').innerHTML = '<i class="fas fa-pause"></i>';
-            }).catch(e => console.log("Auto-play blocked"));
+            }).catch(e => {
+                console.log("Auto-play blocked, waiting for interaction");
+                document.getElementById('play-btn').innerHTML = '<i class="fas fa-play"></i>';
+            });
         }
 
         // --- CONTROLS ---
@@ -396,7 +427,7 @@ $views = $data['views'];
         });
 
         audio.addEventListener('timeupdate', (e) => {
-            const { duration, currentTime } = e.srcElement;
+            const { duration, currentTime } = e.target; // Changed srcElement to target for mobile
             const progressPercent = (currentTime / duration) * 100;
             document.getElementById('progress-bar').style.width = `${progressPercent}%`;
         });
@@ -405,7 +436,9 @@ $views = $data['views'];
             const width = this.clientWidth;
             const clickX = e.offsetX;
             const duration = audio.duration;
-            audio.currentTime = (clickX / width) * duration;
+            if(duration) {
+                audio.currentTime = (clickX / width) * duration;
+            }
         });
 
         // --- INIT ---
@@ -417,18 +450,21 @@ $views = $data['views'];
             startTypewriter();
         });
 
-        document.addEventListener('mousemove', (e) => {
-            const cursor = document.getElementById('cursor');
-            cursor.style.top = e.clientY + 'px';
-            cursor.style.left = e.clientX + 'px';
-        });
+        // Mouse Cursor - Only add listener if not mobile (Basic check)
+        if (window.matchMedia("(hover: hover)").matches) {
+            document.addEventListener('mousemove', (e) => {
+                const cursor = document.getElementById('cursor');
+                cursor.style.top = e.clientY + 'px';
+                cursor.style.left = e.clientX + 'px';
+            });
 
-        document.querySelectorAll('.hover-trigger').forEach(el => {
-            el.addEventListener('mouseenter', () => document.getElementById('cursor').classList.add('hovered'));
-            el.addEventListener('mouseleave', () => document.getElementById('cursor').classList.remove('hovered'));
-        });
+            document.querySelectorAll('.hover-trigger').forEach(el => {
+                el.addEventListener('mouseenter', () => document.getElementById('cursor').classList.add('hovered'));
+                el.addEventListener('mouseleave', () => document.getElementById('cursor').classList.remove('hovered'));
+            });
+        }
 
-        // --- UPDATED TYPEWRITER WITH BACKSPACE ---
+        // --- UPDATED TYPEWRITER ---
         function startTypewriter() {
             const texts = ["Stay with me for a while", "Let's make memories together", "I'm here for you", "Take my hand", "Please Don't give up", "you can endure it", "I can help you", "Please believe in me", "please....", "I'm....", "sorry..."];
             let count = 0; 
@@ -441,29 +477,23 @@ $views = $data['views'];
                 currentText = texts[count];
 
                 if (isDeleting) {
-                    // Backspace
                     index--;
                 } else {
-                    // Type forward
                     index++;
                 }
 
                 document.getElementById('typing').textContent = currentText.slice(0, index);
 
-                // Speed Control
-                let typeSpeed = 100; // Normal typing speed
-                if (isDeleting) typeSpeed = 50; // Faster backspacing
+                let typeSpeed = 100;
+                if (isDeleting) typeSpeed = 50;
 
-                // Logic to switch states
                 if (!isDeleting && index === currentText.length) {
-                    // Finished typing, wait then delete
                     typeSpeed = 2000;
                     isDeleting = true;
                 } else if (isDeleting && index === 0) {
-                    // Finished deleting, move to next
                     isDeleting = false;
                     count++;
-                    typeSpeed = 500; // Small pause before next word
+                    typeSpeed = 500;
                 }
 
                 setTimeout(type, typeSpeed);
