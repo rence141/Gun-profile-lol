@@ -14,7 +14,7 @@ if (!file_exists($stats_file)) {
 $json_content = file_get_contents($stats_file);
 $data = json_decode($json_content, true);
 
-// 4. Data Integrity Check: If JSON is corrupt or empty, reset it to prevent errors
+// 4. Data Integrity Check
 if (!is_array($data) || !isset($data['views']) || !isset($data['ips'])) {
     $data = $default_data;
 }
@@ -23,14 +23,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
 $ip_hash = md5($user_ip);
 
 // 5. UPDATE LOGIC
-// Check if IP is new. 
-// TIP: To test if it works, comment out the "if" condition temporarily so it counts every refresh.
 if (!in_array($ip_hash, $data['ips'])) {
     $data['views']++;
     $data['ips'][] = $ip_hash;
     
-    // 6. Write with LOCK_EX (Exclusive Lock) to prevent file corruption 
-    // when multiple users visit at the same time.
+    // 6. Write with LOCK_EX
     file_put_contents($stats_file, json_encode($data), LOCK_EX);
 }
 
@@ -63,7 +60,6 @@ $views = $data['views'];
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Hide cursor only on non-touch devices */
             cursor: none; 
         }
 
@@ -128,7 +124,6 @@ $views = $data['views'];
         #cursor.hovered { width: 50px; height: 50px; background: rgba(255, 255, 255, 0.2); }
 
         .card {
-            /* MOBILE FIX: Use percentage width with a max-limit */
             width: 90%; 
             max-width: 380px; 
             padding: 30px 25px;
@@ -164,7 +159,7 @@ $views = $data['views'];
             border: 1px solid rgba(255,255,255,0.05);
         }
         .progress-container {
-            width: 100%; height: 10px; /* Thicker for mobile touch */
+            width: 100%; height: 10px;
             background: rgba(255,255,255,0.1);
             border-radius: 5px; margin: 10px 0; overflow: hidden;
             display: flex; align-items: center;
@@ -176,7 +171,6 @@ $views = $data['views'];
         .ctrl-btn:hover { color: #fff; transform: scale(1.2); }
         .play-btn { font-size: 1.6rem; color: #fff; }
 
-        /* --- VOLUME CONTROL --- */
         .volume-control {
             display: flex; align-items: center; justify-content: center;
             gap: 10px; margin-bottom: 10px; font-size: 0.8rem;
@@ -212,10 +206,9 @@ $views = $data['views'];
         .click-text { letter-spacing: 4px; animation: breathe 2s infinite; text-align: center; margin: 0 10px; }
         @keyframes breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
-        /* --- MOBILE MEDIA QUERY --- */
         @media (max-width: 768px) {
-            body { cursor: auto; } /* Restore default cursor */
-            #cursor { display: none; } /* Hide custom cursor */
+            body { cursor: auto; }
+            #cursor { display: none; }
             * { cursor: auto !important; }
             
             .card { width: 88%; padding: 25px 20px; }
@@ -223,11 +216,8 @@ $views = $data['views'];
             .ctrl-btn { font-size: 1.4rem; }
             .play-btn { font-size: 1.8rem; }
             .click-text { font-size: 0.9rem; letter-spacing: 2px; }
-            
-            /* Make volume slider thumb bigger for touch */
             input[type=range]::-webkit-slider-thumb { width: 15px; height: 15px; }
         }
-
     </style>
 </head>
 <body>
@@ -414,11 +404,10 @@ $views = $data['views'];
             audio.src = track.audio;
             triggerEffect(track.effect);
             
-            // Only attempt play if user has interacted (will happen via overlay click)
             audio.play().then(() => {
                 document.getElementById('play-btn').innerHTML = '<i class="fas fa-pause"></i>';
             }).catch(e => {
-                console.log("Auto-play blocked, waiting for interaction");
+                console.log("Auto-play blocked");
                 document.getElementById('play-btn').innerHTML = '<i class="fas fa-play"></i>';
             });
         }
@@ -449,11 +438,17 @@ $views = $data['views'];
         });
 
         audio.addEventListener('timeupdate', (e) => {
-            const { duration, currentTime } = e.target; // Changed srcElement to target for mobile
+            const { duration, currentTime } = e.target;
             const progressPercent = (currentTime / duration) * 100;
             document.getElementById('progress-bar').style.width = `${progressPercent}%`;
         });
         
+        // --- AUTO-PLAY NEXT SONG (LOOP) ---
+        audio.addEventListener('ended', () => {
+            currentTrack = (currentTrack + 1) % playlist.length;
+            loadTrack(currentTrack);
+        });
+
         document.getElementById('progress-container').addEventListener('click', function(e) {
             const width = this.clientWidth;
             const clickX = e.offsetX;
@@ -472,21 +467,18 @@ $views = $data['views'];
             startTypewriter();
         });
 
-        // Mouse Cursor - Only add listener if not mobile (Basic check)
         if (window.matchMedia("(hover: hover)").matches) {
             document.addEventListener('mousemove', (e) => {
                 const cursor = document.getElementById('cursor');
                 cursor.style.top = e.clientY + 'px';
                 cursor.style.left = e.clientX + 'px';
             });
-
             document.querySelectorAll('.hover-trigger').forEach(el => {
                 el.addEventListener('mouseenter', () => document.getElementById('cursor').classList.add('hovered'));
                 el.addEventListener('mouseleave', () => document.getElementById('cursor').classList.remove('hovered'));
             });
         }
 
-        // --- UPDATED TYPEWRITER ---
         function startTypewriter() {
             const texts = ["Stay with me for a while", "Let's make memories together", "I'm here for you", "Take my hand", "Please Don't give up", "you can endure it", "I can help you", "Please believe in me", "please....", "I'm....", "sorry..."];
             let count = 0; 
@@ -497,27 +489,15 @@ $views = $data['views'];
             (function type() {
                 if (count === texts.length) count = 0;
                 currentText = texts[count];
-
-                if (isDeleting) {
-                    index--;
-                } else {
-                    index++;
-                }
-
+                if (isDeleting) index--; else index++;
                 document.getElementById('typing').textContent = currentText.slice(0, index);
-
                 let typeSpeed = 100;
                 if (isDeleting) typeSpeed = 50;
-
                 if (!isDeleting && index === currentText.length) {
-                    typeSpeed = 2000;
-                    isDeleting = true;
+                    typeSpeed = 2000; isDeleting = true;
                 } else if (isDeleting && index === 0) {
-                    isDeleting = false;
-                    count++;
-                    typeSpeed = 500;
+                    isDeleting = false; count++; typeSpeed = 500;
                 }
-
                 setTimeout(type, typeSpeed);
             }());
         }
@@ -526,7 +506,6 @@ $views = $data['views'];
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }, 1000);
-
     </script>
 </body>
 </html>
