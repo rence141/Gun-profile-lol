@@ -299,7 +299,7 @@ $views = $data['views'];
                 title: 'Howl\'s Moving Castle',
                 accent: '#9ef01a', 
                 bgType: 'video',
-                bgSrc: 'assets/bg3.mp4', 
+                bgSrc: 'assets/bg4.mp4', 
                 effect: 'blow', 
                 lyrics: "The waltz of life...<br>Magic in the air."
             }
