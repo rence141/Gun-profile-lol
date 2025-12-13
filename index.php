@@ -1,17 +1,39 @@
 <?php
-// --- BACKEND: VIEW COUNTER ---
+// --- BACKEND: VIEW COUNTER (ROBUST) ---
 $stats_file = 'views.json';
+
+// 1. Initialize default structure
+$default_data = ['views' => 0, 'ips' => []];
+
+// 2. Create file if it doesn't exist
 if (!file_exists($stats_file)) {
-    file_put_contents($stats_file, json_encode(['views' => 0, 'ips' => []]));
+    file_put_contents($stats_file, json_encode($default_data));
 }
-$data = json_decode(file_get_contents($stats_file), true);
+
+// 3. Read file safely
+$json_content = file_get_contents($stats_file);
+$data = json_decode($json_content, true);
+
+// 4. Data Integrity Check: If JSON is corrupt or empty, reset it to prevent errors
+if (!is_array($data) || !isset($data['views']) || !isset($data['ips'])) {
+    $data = $default_data;
+}
+
 $user_ip = $_SERVER['REMOTE_ADDR'];
 $ip_hash = md5($user_ip);
+
+// 5. UPDATE LOGIC
+// Check if IP is new. 
+// TIP: To test if it works, comment out the "if" condition temporarily so it counts every refresh.
 if (!in_array($ip_hash, $data['ips'])) {
     $data['views']++;
     $data['ips'][] = $ip_hash;
-    file_put_contents($stats_file, json_encode($data));
+    
+    // 6. Write with LOCK_EX (Exclusive Lock) to prevent file corruption 
+    // when multiple users visit at the same time.
+    file_put_contents($stats_file, json_encode($data), LOCK_EX);
 }
+
 $views = $data['views'];
 ?>
 
