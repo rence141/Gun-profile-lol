@@ -445,6 +445,7 @@ $views = $data['views'];
         
         // --- AUTO-PLAY NEXT SONG (LOOP) ---
         audio.addEventListener('ended', () => {
+            // The % (modulo) operator ensures it loops back to 0 when it hits the end
             currentTrack = (currentTrack + 1) % playlist.length;
             loadTrack(currentTrack);
         });
