@@ -1,20 +1,15 @@
 <?php
-// --- BACKEND: VIEW COUNTER (ROBUST) ---
+// --- BACKEND: VIEW COUNTER ---
 $stats_file = 'views.json';
 
-// 1. Initialize default structure
 $default_data = ['views' => 0, 'ips' => []];
-
-// 2. Create file if it doesn't exist
 if (!file_exists($stats_file)) {
     file_put_contents($stats_file, json_encode($default_data));
 }
 
-// 3. Read file safely
 $json_content = file_get_contents($stats_file);
 $data = json_decode($json_content, true);
 
-// 4. Data Integrity Check
 if (!is_array($data) || !isset($data['views']) || !isset($data['ips'])) {
     $data = $default_data;
 }
@@ -22,12 +17,9 @@ if (!is_array($data) || !isset($data['views']) || !isset($data['ips'])) {
 $user_ip = $_SERVER['REMOTE_ADDR'];
 $ip_hash = md5($user_ip);
 
-// 5. UPDATE LOGIC
 if (!in_array($ip_hash, $data['ips'])) {
     $data['views']++;
     $data['ips'][] = $ip_hash;
-    
-    // 6. Write with LOCK_EX
     file_put_contents($stats_file, json_encode($data), LOCK_EX);
 }
 
@@ -67,12 +59,14 @@ $views = $data['views'];
         .bg-layer {
             position: fixed; inset: 0; width: 100%; height: 100%;
             object-fit: cover; z-index: -2; 
-            opacity: 0; transition: opacity 1.5s ease;
+            opacity: 0; 
+            /* UPDATED: Faster transition (0.5s instead of 1s) */
+            transition: opacity 0.5s ease-in-out;
             filter: brightness(0.6) contrast(1.1);
         }
         .bg-layer.active { opacity: 1; }
 
-        /* --- RAIN DROPLETS (WINDOW EFFECT) --- */
+        /* --- RAIN DROPLETS --- */
         .rain-window {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 10; pointer-events: none; display: none;
@@ -111,6 +105,28 @@ $views = $data['views'];
             0% { transform: translate(-10vw, 0) rotate(0deg); opacity: 0; top: 50%; }
             20% { opacity: 1; }
             100% { transform: translate(110vw, -100px) rotate(180deg); opacity: 0; top: 50%; }
+        }
+
+        /* --- SLIDING DROPLET EFFECT --- */
+        .slide-drop {
+            position: fixed;
+            top: -50px;
+            z-index: 15;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5));
+            border-radius: 50px;
+            pointer-events: none;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .slide-drop.greenish {
+            background: linear-gradient(to bottom, rgba(100, 255, 100, 0), rgba(150, 255, 150, 0.6));
+            box-shadow: 0 0 10px rgba(100, 255, 100, 0.2);
+        }
+        @keyframes slideDown {
+            0% { transform: translateY(0) scaleY(1); opacity: 0; }
+            10% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(120vh) scaleY(1.2); opacity: 0; }
         }
 
         /* --- UI ELEMENTS --- */
@@ -210,7 +226,6 @@ $views = $data['views'];
             body { cursor: auto; }
             #cursor { display: none; }
             * { cursor: auto !important; }
-            
             .card { width: 88%; padding: 25px 20px; }
             .links a { font-size: 1.5rem; }
             .ctrl-btn { font-size: 1.4rem; }
@@ -218,31 +233,6 @@ $views = $data['views'];
             .click-text { font-size: 0.9rem; letter-spacing: 2px; }
             input[type=range]::-webkit-slider-thumb { width: 15px; height: 15px; }
         }
-
-        /* --- SLIDING DROPLET EFFECT (Added) --- */
-.slide-drop {
-    position: fixed;
-    top: -50px;
-    z-index: 15; /* Above rain window, below UI */
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5));
-    border-radius: 50px;
-    pointer-events: none;
-    backdrop-filter: blur(2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-/* Green tint specifically for Greenpath theme */
-.slide-drop.greenish {
-    background: linear-gradient(to bottom, rgba(100, 255, 100, 0), rgba(150, 255, 150, 0.6));
-    box-shadow: 0 0 10px rgba(100, 255, 100, 0.2);
-}
-
-@keyframes slideDown {
-    0% { transform: translateY(0) scaleY(1); opacity: 0; }
-    10% { opacity: 1; }
-    80% { opacity: 1; }
-    100% { transform: translateY(120vh) scaleY(1.2); opacity: 0; }
-}
     </style>
 </head>
 <body>
@@ -340,21 +330,22 @@ $views = $data['views'];
                 effect: 'blow', 
                 lyrics: "The waltz of life...<br>Magic in the air."
             },
-              {
+            {
                 audio: 'assets/music4.mp3',
                 title: 'Aegis of Bruises Genesus',
                 accent: '#c6ba0cf7', 
                 bgType: 'video',
                 bgSrc: 'assets/bg5.mp4', 
+                effect: 'fall',
                 lyrics: "Adventure onwards...<br>Traveler regards."
             },
-              {
+            {
                 audio: 'assets/music5.mp3',
                 title: 'Hollow Knight - Greenpath',
                 accent: '#1c8d02', 
                 bgType: 'video',
-                effect: 'dripping', 
                 bgSrc: 'assets/bg6.mp4', 
+                effect: 'dripping', 
                 lyrics: "Unbeknown Knight...<br>Favorous child."
             }
         ];
@@ -368,84 +359,81 @@ $views = $data['views'];
         const bgVideo = document.getElementById('bg-video');
         const root = document.documentElement;
         
+        // --- AUDIO HELPERS ---
+        function fadeOutAudio(callback) {
+            if (audio.paused) { callback(); return; }
+            let fadeOut = setInterval(() => {
+                // UPDATED: Faster fade step (0.1)
+                if (audio.volume > 0.1) {
+                    audio.volume -= 0.1;
+                } else {
+                    clearInterval(fadeOut);
+                    audio.pause();
+                    audio.volume = 1.0;
+                    callback();
+                }
+            }, 40); // 40ms interval = approx 0.4s fade out
+        }
+
+        function fadeInAudio() {
+            audio.volume = 0;
+            audio.play().then(() => {
+                let fadeIn = setInterval(() => {
+                    const targetVol = parseFloat(document.getElementById('vol-slider').value);
+                    // UPDATED: Faster fade in step (0.1)
+                    if (audio.volume < targetVol - 0.1) {
+                        audio.volume += 0.1;
+                    } else {
+                        clearInterval(fadeIn);
+                    }
+                }, 40);
+            }).catch(e => console.log("Autoplay blocked"));
+        }
+
         // --- EFFECTS ENGINE ---
-        // --- UPDATED EFFECTS ENGINE ---
+        function clearEffects() {
+            clearInterval(leafInterval);
+            document.getElementById('rain-window').classList.remove('active'); 
+            document.querySelectorAll('.leaf').forEach(e => e.remove());
+            document.querySelectorAll('.slide-drop').forEach(e => e.remove());
+        }
 
-function clearEffects() {
-    clearInterval(leafInterval); // Stops leaves AND dripping
-    document.getElementById('rain-window').classList.remove('active'); 
-    
-    // Remove all dynamic elements
-    document.querySelectorAll('.leaf').forEach(e => e.remove());
-    document.querySelectorAll('.slide-drop').forEach(e => e.remove());
-}
+        function triggerEffect(type) {
+            clearEffects();
 
-function triggerEffect(type) {
-    clearEffects();
+            if (type === 'rain') {
+                document.getElementById('rain-window').classList.add('active');
+                createRainDroplets(); 
+            } 
+            else if (type === 'fall' || type === 'blow') {
+                const colorClass = (type === 'fall') ? 'orange' : 'green';
+                const animName = (type === 'fall') ? 'fall' : 'blow';
+                
+                leafInterval = setInterval(() => {
+                    const leaf = document.createElement('div');
+                    leaf.classList.add('leaf', colorClass);
+                    if(type === 'fall') leaf.style.left = Math.random() * 100 + 'vw';
+                    else leaf.style.top = Math.random() * 100 + 'vh';
 
-    if (type === 'rain') {
-        document.getElementById('rain-window').classList.add('active');
-        createRainDroplets(); 
-    } 
-    else if (type === 'fall' || type === 'blow') {
-        // ... (Your existing leaf logic remains here) ...
-        const colorClass = (type === 'fall') ? 'orange' : 'green';
-        const animName = (type === 'fall') ? 'fall' : 'blow';
-        
-        leafInterval = setInterval(() => {
-            const leaf = document.createElement('div');
-            leaf.classList.add('leaf', colorClass);
-            if(type === 'fall') leaf.style.left = Math.random() * 100 + 'vw';
-            else leaf.style.top = Math.random() * 100 + 'vh';
-
-            const size = Math.random() * 20 + 15;
-            leaf.style.width = `${size}px`; leaf.style.height = `${size}px`;
-            
-            const duration = Math.random() * 5 + 5;
-            leaf.style.animation = `${animName} ${duration}s linear forwards`;
-            
-            document.body.appendChild(leaf);
-            setTimeout(() => leaf.remove(), duration * 1000);
-        }, 800);
-    }
-    // NEW: The Dripping Logic
-    else if (type === 'dripping') {
-        createSlidingDroplets();
-    }
-}
-
-function createSlidingDroplets() {
-    // Reuse leafInterval to manage the loop
-    leafInterval = setInterval(() => {
-        const drop = document.createElement('div');
-        drop.classList.add('slide-drop', 'greenish'); // Add greenish class
-        
-        // Randomize position
-        drop.style.left = Math.random() * 100 + 'vw';
-        
-        // Randomize size (thin and long like a trail)
-        const width = Math.random() * 2 + 1; 
-        const height = Math.random() * 30 + 10;
-        drop.style.width = width + 'px';
-        drop.style.height = height + 'px';
-        
-        // Randomize speed
-        const duration = Math.random() * 2 + 1.5; // Between 1.5s and 3.5s
-        drop.style.animation = `slideDown ${duration}s ease-in forwards`;
-        
-        document.body.appendChild(drop);
-        
-        // Cleanup
-        setTimeout(() => drop.remove(), duration * 1000);
-    }, 150); // Spawn a new drop every 150ms
-}
+                    const size = Math.random() * 20 + 15;
+                    leaf.style.width = `${size}px`; leaf.style.height = `${size}px`;
+                    
+                    const duration = Math.random() * 5 + 5;
+                    leaf.style.animation = `${animName} ${duration}s linear forwards`;
+                    
+                    document.body.appendChild(leaf);
+                    setTimeout(() => leaf.remove(), duration * 1000);
+                }, 800);
+            }
+            else if (type === 'dripping') {
+                createSlidingDroplets();
+            }
+        }
 
         function createRainDroplets() {
             const container = document.getElementById('rain-window');
             container.innerHTML = '';
-            // Reduced droplet count for mobile performance
             const dropCount = window.innerWidth < 768 ? 40 : 80;
-            
             for(let i=0; i<dropCount; i++) {
                 const drop = document.createElement('div');
                 drop.classList.add('droplet');
@@ -459,34 +447,63 @@ function createSlidingDroplets() {
             }
         }
 
-        // --- PLAYER LOGIC ---
-        function loadTrack(index) {
-            const track = playlist[index];
-            root.style.setProperty('--accent', track.accent);
-            document.getElementById('song-title').innerText = track.title;
-            document.getElementById('lyrics-box').innerHTML = track.lyrics;
-            
-            if (track.bgType === 'video') {
-                bgImage.classList.remove('active');
-                bgVideo.src = track.bgSrc;
-                bgVideo.play().catch(e => console.log('Video Play Error', e));
-                bgVideo.classList.add('active');
-            } else {
-                bgVideo.classList.remove('active');
-                bgVideo.pause();
-                bgImage.src = track.bgSrc;
-                bgImage.classList.add('active');
-            }
+        function createSlidingDroplets() {
+            leafInterval = setInterval(() => {
+                const drop = document.createElement('div');
+                drop.classList.add('slide-drop', 'greenish');
+                drop.style.left = Math.random() * 100 + 'vw';
+                const width = Math.random() * 2 + 1; 
+                const height = Math.random() * 30 + 10;
+                drop.style.width = width + 'px';
+                drop.style.height = height + 'px';
+                const duration = Math.random() * 2 + 1.5;
+                drop.style.animation = `slideDown ${duration}s ease-in forwards`;
+                document.body.appendChild(drop);
+                setTimeout(() => drop.remove(), duration * 1000);
+            }, 150);
+        }
 
-            audio.src = track.audio;
-            triggerEffect(track.effect);
+        // --- PLAYER LOGIC ---
+        function loadTrack(index, isTransition = false) {
+            const track = playlist[index];
             
-            audio.play().then(() => {
-                document.getElementById('play-btn').innerHTML = '<i class="fas fa-pause"></i>';
-            }).catch(e => {
-                console.log("Auto-play blocked");
-                document.getElementById('play-btn').innerHTML = '<i class="fas fa-play"></i>';
-            });
+            // 1. FADE OUT VISUALS
+            bgImage.classList.remove('active');
+            bgVideo.classList.remove('active');
+            
+            // UPDATED: 500ms delay matches the faster CSS transition
+            const delay = isTransition ? 500 : 0; 
+
+            setTimeout(() => {
+                root.style.setProperty('--accent', track.accent);
+                document.getElementById('song-title').innerText = track.title;
+                document.getElementById('lyrics-box').innerHTML = track.lyrics;
+
+                if (track.bgType === 'video') {
+                    bgVideo.src = track.bgSrc;
+                    bgVideo.onloadeddata = () => {
+                        bgVideo.play();
+                        bgVideo.classList.add('active'); 
+                    };
+                } else {
+                    bgVideo.pause();
+                    bgImage.src = track.bgSrc;
+                    bgImage.onload = () => {
+                        bgImage.classList.add('active'); 
+                    };
+                }
+
+                audio.src = track.audio;
+                triggerEffect(track.effect);
+                
+                if (isTransition) {
+                    fadeInAudio();
+                    document.getElementById('play-btn').innerHTML = '<i class="fas fa-pause"></i>';
+                } else {
+                    document.getElementById('play-btn').innerHTML = '<i class="fas fa-play"></i>';
+                }
+
+            }, delay);
         }
 
         // --- CONTROLS ---
@@ -501,13 +518,17 @@ function createSlidingDroplets() {
         });
 
         document.getElementById('next-btn').addEventListener('click', () => {
-            currentTrack = (currentTrack + 1) % playlist.length;
-            loadTrack(currentTrack);
+            fadeOutAudio(() => {
+                currentTrack = (currentTrack + 1) % playlist.length;
+                loadTrack(currentTrack, true);
+            });
         });
 
         document.getElementById('prev-btn').addEventListener('click', () => {
-            currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
-            loadTrack(currentTrack);
+            fadeOutAudio(() => {
+                currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
+                loadTrack(currentTrack, true);
+            });
         });
 
         document.getElementById('vol-slider').addEventListener('input', (e) => {
@@ -516,15 +537,17 @@ function createSlidingDroplets() {
 
         audio.addEventListener('timeupdate', (e) => {
             const { duration, currentTime } = e.target;
-            const progressPercent = (currentTime / duration) * 100;
-            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+            if(duration) {
+                const progressPercent = (currentTime / duration) * 100;
+                document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+            }
         });
         
-        // --- AUTO-PLAY NEXT SONG (LOOP) ---
         audio.addEventListener('ended', () => {
-            // The % (modulo) operator ensures it loops back to 0 when it hits the end
-            currentTrack = (currentTrack + 1) % playlist.length;
-            loadTrack(currentTrack);
+            fadeOutAudio(() => {
+                currentTrack = (currentTrack + 1) % playlist.length;
+                loadTrack(currentTrack, true);
+            });
         });
 
         document.getElementById('progress-container').addEventListener('click', function(e) {
@@ -541,7 +564,7 @@ function createSlidingDroplets() {
             document.getElementById('overlay').style.opacity = '0';
             setTimeout(() => document.getElementById('overlay').style.display = 'none', 800);
             document.getElementById('main-card').style.opacity = '1';
-            loadTrack(0);
+            loadTrack(0, false); 
             startTypewriter();
         });
 
