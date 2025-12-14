@@ -336,7 +336,6 @@ $views = $data['views'];
                 accent: '#c6ba0cf7', 
                 bgType: 'video',
                 bgSrc: 'assets/bg5.mp4', 
-                effect: 'fall',
                 lyrics: "Adventure onwards...<br>Traveler regards."
             },
             {
