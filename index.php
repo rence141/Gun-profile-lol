@@ -65,6 +65,15 @@ $views = $data['views'];
         }
         .bg-layer.active { opacity: 1; }
 
+        /* --- NEW ANIMATION: SUBTLE FLASH --- */
+        @keyframes flash {
+            0%, 100% { filter: brightness(0.6) contrast(1.1); }
+            50% { filter: brightness(1.2) contrast(1.3) hue-rotate(10deg); }
+        }
+        .bg-layer.flashing {
+            animation: flash 0.4s infinite; /* Not too fast, just enough to be unsettling */
+        }
+
         /* --- RAIN DROPLETS --- */
         .rain-window {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -147,7 +156,23 @@ $views = $data['views'];
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 20px; text-align: center;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-            transition: opacity 1s ease;
+            transition: opacity 1s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        /* --- NEW ANIMATION: HEARTBEAT & BLOOD BORDER --- */
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            5% { transform: scale(1.02); }
+            10% { transform: scale(1); }
+            15% { transform: scale(1.02); }
+            50% { transform: scale(1); }
+            100% { transform: scale(1); }
+        }
+
+        .card.blood-mode {
+            border-color: #ff0000 !important;
+            box-shadow: 0 0 30px rgba(180, 0, 0, 0.6) !important;
+            animation: heartbeat 1.2s infinite;
         }
         
         /* --- AVATAR WRAPPER FOR FADE EFFECT --- */
@@ -418,6 +443,7 @@ $views = $data['views'];
         const bgImage = document.getElementById('bg-image');
         const bgVideo = document.getElementById('bg-video');
         const pfpAlt = document.getElementById('pfp-alt'); 
+        const mainCard = document.getElementById('main-card'); // Ref for border effect
         const root = document.documentElement;
         
         // --- AUDIO HELPERS ---
@@ -522,6 +548,10 @@ $views = $data['views'];
         function loadTrack(index, isTransition = false) {
             const track = playlist[index];
             
+            // CLEANUP: Remove climax effects if changing song
+            mainCard.classList.remove('blood-mode');
+            bgVideo.classList.remove('flashing');
+
             // 1. Fade out visuals immediately
             bgImage.classList.remove('active');
             bgVideo.classList.remove('active');
@@ -625,17 +655,19 @@ $views = $data['views'];
             }
 
             // --- DRIFT CORRECTION ---
-            // If video is playing but gets out of sync with audio, snap it back
             if (track.bgType === 'video' && !audio.paused && !bgVideo.paused) {
                 const drift = Math.abs(bgVideo.currentTime - currentTime);
-                if (drift > 0.2) { // Tolerance of 0.2 seconds
+                if (drift > 0.2) { 
                     bgVideo.currentTime = currentTime;
                 }
             }
 
-            // --- OMORI CLIMAX CHECKER ---
+            // --- OMORI CLIMAX & EVENTS LOGIC ---
             if (track.title.includes('OMORI') && track.climaxTime) {
-                if (currentTime >= track.climaxTime) {
+                
+                // 1. PFP SWAP LOGIC (Start at 44s, End at 90s)
+                if (currentTime >= track.climaxTime && currentTime < 90) {
+                    // Show scary PFP
                     pfpAlt.style.opacity = 1; 
                     if(currentTexts !== omoriTexts) {
                         currentTexts = omoriTexts;
@@ -643,12 +675,23 @@ $views = $data['views'];
                         document.getElementById('typing').textContent = "";
                     }
                 } else {
+                    // Revert PFP (Either before 44s OR after 90s)
                     pfpAlt.style.opacity = 0; 
                     if(currentTexts !== originalTexts) {
                         currentTexts = originalTexts;
                         typeCount = 0; typeIndex = 0; isDeleting = false;
                         document.getElementById('typing').textContent = "";
                     }
+                }
+
+                // 2. INTENSE MODE LOGIC (Start at 57s, End at 90s)
+                // Red Border + Heartbeat + Background Flash
+                if (currentTime >= 57 && currentTime < 90) {
+                    mainCard.classList.add('blood-mode');
+                    bgVideo.classList.add('flashing');
+                } else {
+                    mainCard.classList.remove('blood-mode');
+                    bgVideo.classList.remove('flashing');
                 }
             }
         });
