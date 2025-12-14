@@ -218,6 +218,31 @@ $views = $data['views'];
             .click-text { font-size: 0.9rem; letter-spacing: 2px; }
             input[type=range]::-webkit-slider-thumb { width: 15px; height: 15px; }
         }
+
+        /* --- SLIDING DROPLET EFFECT (Added) --- */
+.slide-drop {
+    position: fixed;
+    top: -50px;
+    z-index: 15; /* Above rain window, below UI */
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5));
+    border-radius: 50px;
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* Green tint specifically for Greenpath theme */
+.slide-drop.greenish {
+    background: linear-gradient(to bottom, rgba(100, 255, 100, 0), rgba(150, 255, 150, 0.6));
+    box-shadow: 0 0 10px rgba(100, 255, 100, 0.2);
+}
+
+@keyframes slideDown {
+    0% { transform: translateY(0) scaleY(1); opacity: 0; }
+    10% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateY(120vh) scaleY(1.2); opacity: 0; }
+}
     </style>
 </head>
 <body>
@@ -314,6 +339,23 @@ $views = $data['views'];
                 bgSrc: 'assets/bg4.mp4', 
                 effect: 'blow', 
                 lyrics: "The waltz of life...<br>Magic in the air."
+            },
+              {
+                audio: 'assets/music4.mp3',
+                title: 'Aegis of Bruises Genesus',
+                accent: '#c6ba0cf7', 
+                bgType: 'video',
+                bgSrc: 'assets/bg5.mp4', 
+                lyrics: "Adventure onwards...<br>Traveler regards."
+            },
+              {
+                audio: 'assets/music5.mp3',
+                title: 'Hollow Knight - Greenpath',
+                accent: '#1c8d02', 
+                bgType: 'video',
+                effect: 'dripping', 
+                bgSrc: 'assets/bg6.mp4', 
+                lyrics: "Unbeknown Knight...<br>Favorous child."
             }
         ];
 
@@ -327,41 +369,76 @@ $views = $data['views'];
         const root = document.documentElement;
         
         // --- EFFECTS ENGINE ---
-        function clearEffects() {
-            clearInterval(leafInterval);
-            document.getElementById('rain-window').classList.remove('active'); 
-            document.querySelectorAll('.leaf').forEach(e => e.remove());
-        }
+        // --- UPDATED EFFECTS ENGINE ---
 
-        function triggerEffect(type) {
-            clearEffects();
+function clearEffects() {
+    clearInterval(leafInterval); // Stops leaves AND dripping
+    document.getElementById('rain-window').classList.remove('active'); 
+    
+    // Remove all dynamic elements
+    document.querySelectorAll('.leaf').forEach(e => e.remove());
+    document.querySelectorAll('.slide-drop').forEach(e => e.remove());
+}
 
-            if (type === 'rain') {
-                document.getElementById('rain-window').classList.add('active');
-                createRainDroplets(); 
-            } 
-            else if (type === 'fall' || type === 'blow') {
-                const colorClass = (type === 'fall') ? 'orange' : 'green';
-                const animName = (type === 'fall') ? 'fall' : 'blow';
-                
-                leafInterval = setInterval(() => {
-                    const leaf = document.createElement('div');
-                    leaf.classList.add('leaf', colorClass);
-                    
-                    if(type === 'fall') leaf.style.left = Math.random() * 100 + 'vw';
-                    else leaf.style.top = Math.random() * 100 + 'vh';
+function triggerEffect(type) {
+    clearEffects();
 
-                    const size = Math.random() * 20 + 15;
-                    leaf.style.width = `${size}px`; leaf.style.height = `${size}px`;
-                    
-                    const duration = Math.random() * 5 + 5;
-                    leaf.style.animation = `${animName} ${duration}s linear forwards`;
-                    
-                    document.body.appendChild(leaf);
-                    setTimeout(() => leaf.remove(), duration * 1000);
-                }, 800);
-            }
-        }
+    if (type === 'rain') {
+        document.getElementById('rain-window').classList.add('active');
+        createRainDroplets(); 
+    } 
+    else if (type === 'fall' || type === 'blow') {
+        // ... (Your existing leaf logic remains here) ...
+        const colorClass = (type === 'fall') ? 'orange' : 'green';
+        const animName = (type === 'fall') ? 'fall' : 'blow';
+        
+        leafInterval = setInterval(() => {
+            const leaf = document.createElement('div');
+            leaf.classList.add('leaf', colorClass);
+            if(type === 'fall') leaf.style.left = Math.random() * 100 + 'vw';
+            else leaf.style.top = Math.random() * 100 + 'vh';
+
+            const size = Math.random() * 20 + 15;
+            leaf.style.width = `${size}px`; leaf.style.height = `${size}px`;
+            
+            const duration = Math.random() * 5 + 5;
+            leaf.style.animation = `${animName} ${duration}s linear forwards`;
+            
+            document.body.appendChild(leaf);
+            setTimeout(() => leaf.remove(), duration * 1000);
+        }, 800);
+    }
+    // NEW: The Dripping Logic
+    else if (type === 'dripping') {
+        createSlidingDroplets();
+    }
+}
+
+function createSlidingDroplets() {
+    // Reuse leafInterval to manage the loop
+    leafInterval = setInterval(() => {
+        const drop = document.createElement('div');
+        drop.classList.add('slide-drop', 'greenish'); // Add greenish class
+        
+        // Randomize position
+        drop.style.left = Math.random() * 100 + 'vw';
+        
+        // Randomize size (thin and long like a trail)
+        const width = Math.random() * 2 + 1; 
+        const height = Math.random() * 30 + 10;
+        drop.style.width = width + 'px';
+        drop.style.height = height + 'px';
+        
+        // Randomize speed
+        const duration = Math.random() * 2 + 1.5; // Between 1.5s and 3.5s
+        drop.style.animation = `slideDown ${duration}s ease-in forwards`;
+        
+        document.body.appendChild(drop);
+        
+        // Cleanup
+        setTimeout(() => drop.remove(), duration * 1000);
+    }, 150); // Spawn a new drop every 150ms
+}
 
         function createRainDroplets() {
             const container = document.getElementById('rain-window');
