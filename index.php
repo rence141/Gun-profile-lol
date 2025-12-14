@@ -335,7 +335,7 @@ $views = $data['views'];
                 title: 'Aegis of Bruises Genesus',
                 accent: '#c6ba0cf7', 
                 bgType: 'video',
-                bgSrc: 'assets/bg5.mp4', 
+                bgSrc: 'assets/Bg5.mp4', 
                 lyrics: "Adventure onwards...<br>Traveler regards."
             },
             {
