@@ -388,43 +388,28 @@ $views = $data['views'];
                 bgSrc: 'assets/bg7.mp4',
                 effect: 'slow-glitch',
                 lyrics: "Close your eyes...<br>You’ll be here soon.",
-                // CLIMAX TIME SET TO 44 SECONDS
+                // CLIMAX TIME
                 climaxTime: 44
             }
         ];
 
-        // --- TYPEWRITER CONFIGURATION ---
+        // --- TYPEWRITER TEXTS ---
         const originalTexts = [
-            "Stay with me for a while", 
-            "Let's make memories together", 
-            "I'm here for you", 
-            "Take my hand", 
-            "Please Don't give up", 
-            "you can endure it", 
-            "I can help you", 
-            "Please believe in me", 
-            "please....", 
-            "I'm....", 
-            "sorry..."
+            "Stay with me for a while", "Let's make memories together", "I'm here for you", 
+            "Take my hand", "Please Don't give up", "you can endure it", "I can help you", 
+            "Please believe in me", "please....", "I'm....", "sorry..."
         ];
 
         const omoriTexts = [
-            "SLEEP...",
-            "DEPRESSED...",
-            "Everything is going to be okay?",
-            "Waiting for something to happen?",
-            "Oyasumi",
-            "DIE DIE DIE"
+            "SLEEP...", "DEPRESSED...", "Everything is going to be okay?", 
+            "Waiting for something to happen?", "Oyasumi", "DIE DIE DIE"
         ];
 
         let currentTexts = originalTexts; 
-
-        // Typewriter State Variables
         let typeCount = 0; 
         let typeIndex = 0; 
         let currentText = ""; 
         let isDeleting = false;
-
         let currentTrack = 0;
         let leafInterval;
 
@@ -444,7 +429,7 @@ $views = $data['views'];
                 } else {
                     clearInterval(fadeOut);
                     audio.pause();
-                    bgVideo.pause(); // Sync Video Pause
+                    bgVideo.pause(); // Stop video too
                     audio.volume = 1.0;
                     callback();
                 }
@@ -454,9 +439,6 @@ $views = $data['views'];
         function fadeInAudio() {
             audio.volume = 0;
             audio.play().then(() => {
-                // Sync Video Play
-                if(playlist[currentTrack].bgType === 'video') bgVideo.play();
-                
                 let fadeIn = setInterval(() => {
                     const targetVol = parseFloat(document.getElementById('vol-slider').value);
                     if (audio.volume < targetVol - 0.1) {
@@ -478,7 +460,6 @@ $views = $data['views'];
 
         function triggerEffect(type) {
             clearEffects();
-
             if (type === 'rain') {
                 document.getElementById('rain-window').classList.add('active');
                 createRainDroplets(); 
@@ -486,19 +467,15 @@ $views = $data['views'];
             else if (type === 'fall' || type === 'blow') {
                 const colorClass = (type === 'fall') ? 'orange' : 'green';
                 const animName = (type === 'fall') ? 'fall' : 'blow';
-                
                 leafInterval = setInterval(() => {
                     const leaf = document.createElement('div');
                     leaf.classList.add('leaf', colorClass);
                     if(type === 'fall') leaf.style.left = Math.random() * 100 + 'vw';
                     else leaf.style.top = Math.random() * 100 + 'vh';
-
                     const size = Math.random() * 20 + 15;
                     leaf.style.width = `${size}px`; leaf.style.height = `${size}px`;
-                    
                     const duration = Math.random() * 5 + 5;
                     leaf.style.animation = `${animName} ${duration}s linear forwards`;
-                    
                     document.body.appendChild(leaf);
                     setTimeout(() => leaf.remove(), duration * 1000);
                 }, 800);
@@ -541,11 +518,11 @@ $views = $data['views'];
             }, 150);
         }
 
-        // --- PLAYER LOGIC ---
+        // --- CORE PLAYER LOGIC (FIXED SYNC) ---
         function loadTrack(index, isTransition = false) {
             const track = playlist[index];
             
-            // 1. FADE OUT VISUALS
+            // 1. Fade out visuals immediately
             bgImage.classList.remove('active');
             bgVideo.classList.remove('active');
             
@@ -556,52 +533,57 @@ $views = $data['views'];
                 document.getElementById('song-title').innerText = track.title;
                 document.getElementById('lyrics-box').innerHTML = track.lyrics;
 
-                // --- 1. RESET PFP ---
+                // Reset PFP & Text
                 pfpAlt.style.opacity = 0; 
-                if (track.title.includes('OMORI')) {
-                    pfpAlt.src = "assets/omori-emotions.gif";
-                } else {
-                    pfpAlt.src = ""; 
-                }
+                if (track.title.includes('OMORI')) pfpAlt.src = "assets/omori-emotions.gif";
+                else pfpAlt.src = ""; 
 
-                // --- 2. SWITCH TYPEWRITER TEXT ---
                 currentTexts = originalTexts;
-                typeCount = 0;
-                typeIndex = 0;
-                isDeleting = false;
+                typeCount = 0; typeIndex = 0; isDeleting = false;
                 document.getElementById('typing').textContent = "";
 
-                // --- 3. BACKGROUND ---
-                if (track.bgType === 'video') {
-                    bgVideo.src = track.bgSrc;
-                    bgVideo.onloadeddata = () => {
-                        bgVideo.play();
-                        bgVideo.classList.add('active'); 
-                    };
-                } else {
-                    bgVideo.pause();
-                    bgImage.src = track.bgSrc;
-                    bgImage.onload = () => {
-                        bgImage.classList.add('active'); 
-                    };
-                }
-
+                // SET AUDIO SOURCE BUT DO NOT PLAY YET
                 audio.src = track.audio;
                 triggerEffect(track.effect);
+
+                // --- LOGIC SPLIT: VIDEO vs IMAGE ---
                 
-                if (isTransition) {
-                    fadeInAudio();
-                    document.getElementById('play-btn').innerHTML = '<i class="fas fa-pause"></i>';
+                if (track.bgType === 'video') {
+                    // IF VIDEO: Load Video first, THEN play audio
+                    bgVideo.src = track.bgSrc;
+                    
+                    bgVideo.onloadeddata = () => {
+                        bgVideo.classList.add('active'); 
+                        
+                        if (isTransition) {
+                            // Perfect Sync Start
+                            bgVideo.currentTime = 0;
+                            bgVideo.play();
+                            fadeInAudio(); 
+                            document.getElementById('play-btn').innerHTML = '<i class="fas fa-pause"></i>';
+                        } else {
+                            // Just ready state (initial load)
+                            document.getElementById('play-btn').innerHTML = '<i class="fas fa-play"></i>';
+                        }
+                    };
                 } else {
-                    document.getElementById('play-btn').innerHTML = '<i class="fas fa-play"></i>';
+                    // IF IMAGE: Standard load
+                    bgVideo.pause();
+                    bgImage.src = track.bgSrc;
+                    bgImage.onload = () => bgImage.classList.add('active'); 
+                    
+                    if (isTransition) {
+                        fadeInAudio();
+                        document.getElementById('play-btn').innerHTML = '<i class="fas fa-pause"></i>';
+                    } else {
+                        document.getElementById('play-btn').innerHTML = '<i class="fas fa-play"></i>';
+                    }
                 }
 
             }, delay);
         }
 
         // --- CONTROLS ---
-        
-        // UPDATED: Sync Video Play/Pause
         document.getElementById('play-btn').addEventListener('click', () => {
             if (audio.paused) {
                 audio.play();
@@ -632,7 +614,7 @@ $views = $data['views'];
             audio.volume = e.target.value;
         });
 
-        // --- TIME UPDATE & CLIMAX CHECKER ---
+        // --- TIME UPDATE & SYNC CHECKER ---
         audio.addEventListener('timeupdate', (e) => {
             const { duration, currentTime } = e.target;
             const track = playlist[currentTrack];
@@ -642,26 +624,29 @@ $views = $data['views'];
                 document.getElementById('progress-bar').style.width = `${progressPercent}%`;
             }
 
-            // CHECK FOR CLIMAX (Text & PFP Switcher)
+            // --- DRIFT CORRECTION ---
+            // If video is playing but gets out of sync with audio, snap it back
+            if (track.bgType === 'video' && !audio.paused && !bgVideo.paused) {
+                const drift = Math.abs(bgVideo.currentTime - currentTime);
+                if (drift > 0.2) { // Tolerance of 0.2 seconds
+                    bgVideo.currentTime = currentTime;
+                }
+            }
+
+            // --- OMORI CLIMAX CHECKER ---
             if (track.title.includes('OMORI') && track.climaxTime) {
                 if (currentTime >= track.climaxTime) {
-                    // CLIMAX REACHED
                     pfpAlt.style.opacity = 1; 
                     if(currentTexts !== omoriTexts) {
                         currentTexts = omoriTexts;
-                        typeCount = 0;
-                        typeIndex = 0;
-                        isDeleting = false;
+                        typeCount = 0; typeIndex = 0; isDeleting = false;
                         document.getElementById('typing').textContent = "";
                     }
                 } else {
-                    // BEFORE CLIMAX
                     pfpAlt.style.opacity = 0; 
                     if(currentTexts !== originalTexts) {
                         currentTexts = originalTexts;
-                        typeCount = 0;
-                        typeIndex = 0;
-                        isDeleting = false;
+                        typeCount = 0; typeIndex = 0; isDeleting = false;
                         document.getElementById('typing').textContent = "";
                     }
                 }
@@ -675,21 +660,14 @@ $views = $data['views'];
             });
         });
 
-        // --- UPDATED: CLICK TO SEEK (SYNCHRONOUS VIDEO) ---
         document.getElementById('progress-container').addEventListener('click', function(e) {
             const width = this.clientWidth;
             const clickX = e.offsetX;
             const duration = audio.duration;
-            
             if(duration) {
                 const newTime = (clickX / width) * duration;
-                
-                // 1. Set Audio Time
                 audio.currentTime = newTime;
-                
-                // 2. Set Video Time (Synchronize)
-                const track = playlist[currentTrack];
-                if (track.bgType === 'video') {
+                if (playlist[currentTrack].bgType === 'video') {
                     bgVideo.currentTime = newTime;
                 }
             }
@@ -701,7 +679,7 @@ $views = $data['views'];
             setTimeout(() => document.getElementById('overlay').style.display = 'none', 800);
             document.getElementById('main-card').style.opacity = '1';
             loadTrack(0, false); 
-            startTypewriter(); // Start the loop
+            startTypewriter(); 
         });
 
         if (window.matchMedia("(hover: hover)").matches) {
@@ -716,26 +694,19 @@ $views = $data['views'];
             });
         }
 
-        // --- TYPEWRITER LOGIC ---
+        // --- TYPEWRITER ---
         function startTypewriter() {
             (function type() {
                 if (typeCount >= currentTexts.length) typeCount = 0;
                 currentText = currentTexts[typeCount];
-                
                 if (isDeleting) typeIndex--; else typeIndex++;
-                
                 document.getElementById('typing').textContent = currentText.slice(0, typeIndex);
-                
                 let typeSpeed = 100;
                 if (isDeleting) typeSpeed = 50;
-                
                 if (!isDeleting && typeIndex === currentText.length) {
-                    typeSpeed = 2000; 
-                    isDeleting = true;
+                    typeSpeed = 2000; isDeleting = true;
                 } else if (isDeleting && typeIndex === 0) {
-                    isDeleting = false; 
-                    typeCount++; 
-                    typeSpeed = 500;
+                    isDeleting = false; typeCount++; typeSpeed = 500;
                 }
                 setTimeout(type, typeSpeed);
             }());
