@@ -60,7 +60,6 @@ $views = $data['views'];
             position: fixed; inset: 0; width: 100%; height: 100%;
             object-fit: cover; z-index: -2; 
             opacity: 0; 
-            /* UPDATED: Faster transition (0.5s instead of 1s) */
             transition: opacity 0.5s ease-in-out;
             filter: brightness(0.6) contrast(1.1);
         }
@@ -151,10 +150,39 @@ $views = $data['views'];
             transition: opacity 1s ease;
         }
         
-        .avatar {
-            width: 100px; height: 100px; border-radius: 50%;
+        /* --- AVATAR WRAPPER FOR FADE EFFECT --- */
+        .avatar-wrapper {
+            position: relative; 
+            width: 100px; 
+            height: 100px; 
+            margin: 0 auto 15px auto;
+            border-radius: 50%;
             border: 2px solid rgba(255,255,255,0.2);
-            margin-bottom: 15px; object-fit: cover;
+            overflow: hidden; 
+            background-color: #000;
+            z-index: 5;
+        }
+
+        .avatar-img {
+            position: absolute;
+            top: 0; 
+            left: 0;
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover;
+            transition: opacity 0.5s ease-in-out; 
+        }
+
+        /* Ensure Normal is always at the bottom (z-index 1) and visible */
+        #pfp-normal { 
+            z-index: 1; 
+            opacity: 1; 
+        }
+
+        /* Ensure Omori is on top (z-index 2) but hidden (opacity 0) initially */
+        #pfp-alt { 
+            z-index: 2; 
+            opacity: 0; 
         }
 
         .username { font-size: 1.8rem; font-weight: 700; margin-bottom: 5px; }
@@ -251,7 +279,11 @@ $views = $data['views'];
 
     <div class="card" id="main-card" style="opacity:0">
         <div class="card-content">
-            <img src="https://scontent.fmnl3-4.fna.fbcdn.net/v/t39.30808-6/475687044_1306906997102854_5197075266384357703_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=a5f93a&_nc_eui2=AeFZ7caDZEXQhVFX0RGVbvJSRYAWgSF3QiBFgBaBIXdCIOuAKBLpFTWkJp5Ie9ewoufhNdjNRPiidF633snSoay4&_nc_ohc=77RNBuqIJegQ7kNvwHwst1U&_nc_oc=AdkejvgpMoWfBk7zDMoKbegOkkpgaN-du_g3rCZpMRE4WZQt48QSc1hHevd9oJn05i4&_nc_zt=23&_nc_ht=scontent.fmnl3-4.fna&_nc_gid=3TIaa_tnnfb0dEM1jhJKjQ&oh=00_AfmQrZAj_ua5JtRSfxubSfmhgQ0mPBy5tFYm-TwmoI4oRA&oe=6942ABA8" class="avatar" alt="Avatar">
+            <div class="avatar-wrapper">
+                    <img id="pfp-normal" src="https://scontent.fmnl3-4.fna.fbcdn.net/v/t39.30808-6/475687044_1306906997102854_5197075266384357703_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=a5f93a&_nc_eui2=AeFZ7caDZEXQhVFX0RGVbvJSRYAWgSF3QiBFgBaBIXdCIOuAKBLpFTWkJp5Ie9ewoufhNdjNRPiidF633snSoay4&_nc_ohc=NfhBj-atVYoQ7kNvwEjH5VL&_nc_oc=AdmeVQkNeHrhCh6YNCxFe9mlNlmrwnO7HmdkBmkc_m_mvg6ZWDo7bOswouATAcW9Kyo&_nc_zt=23&_nc_ht=scontent.fmnl3-4.fna&_nc_gid=wO0UtHU0NBtwMKefmbE8tg&oh=00_AfkPR4NjYbg6uE2ddsP__HMmjq-icbcwnd-YQ6zaAKqfYg&oe=6944A5E8" class="avatar-img" alt="Normal PFP">
+                    <img id="pfp-alt" src="assets/omori-emotions.gif" class="avatar-img" alt="Omori PFP">
+                </div>
+
             <div class="username">Rensu</div>
             
             <div class="badges">
@@ -302,6 +334,7 @@ $views = $data['views'];
 
     <script>
         // --- CONFIGURATION ---
+        
         const playlist = [
             {
                 audio: 'assets/mymusic.mp3', 
@@ -346,8 +379,53 @@ $views = $data['views'];
                 bgSrc: 'assets/bg6.mp4', 
                 effect: 'dripping', 
                 lyrics: "Unbeknown Knight...<br>Favorous child."
+            },
+            {
+                audio: 'assets/music6.mp3',
+                title: 'OMORI - My Time',
+                accent: '#ffb7c5',
+                bgType: 'video',
+                bgSrc: 'assets/bg7.mp4',
+                effect: 'slow-glitch',
+                lyrics: "Close your eyes...<br>You’ll be here soon.",
+                // CLIMAX TIME SET TO 44 SECONDS
+                climaxTime: 44
             }
         ];
+
+        // --- TYPEWRITER CONFIGURATION ---
+        // 1. ORIGINAL TEXTS (For Normal Songs & Omori before climax)
+        const originalTexts = [
+            "Stay with me for a while", 
+            "Let's make memories together", 
+            "I'm here for you", 
+            "Take my hand", 
+            "Please Don't give up", 
+            "you can endure it", 
+            "I can help you", 
+            "Please believe in me", 
+            "please....", 
+            "I'm....", 
+            "sorry..."
+        ];
+
+        // 2. OMORI TEXTS (For Omori Songs AFTER climax)
+        const omoriTexts = [
+            "SLEEP...",
+            "DEPRESSED...",
+            "Everything is going to be okay?",
+            "Waiting for something to happen?",
+            "Oyasumi",
+            "DIE DIE DIE"
+        ];
+
+        let currentTexts = originalTexts; // Default start
+
+        // Typewriter State Variables
+        let typeCount = 0; 
+        let typeIndex = 0; 
+        let currentText = ""; 
+        let isDeleting = false;
 
         let currentTrack = 0;
         let leafInterval;
@@ -356,13 +434,13 @@ $views = $data['views'];
         const audio = document.getElementById('audio-player');
         const bgImage = document.getElementById('bg-image');
         const bgVideo = document.getElementById('bg-video');
+        const pfpAlt = document.getElementById('pfp-alt'); 
         const root = document.documentElement;
         
         // --- AUDIO HELPERS ---
         function fadeOutAudio(callback) {
             if (audio.paused) { callback(); return; }
             let fadeOut = setInterval(() => {
-                // UPDATED: Faster fade step (0.1)
                 if (audio.volume > 0.1) {
                     audio.volume -= 0.1;
                 } else {
@@ -371,7 +449,7 @@ $views = $data['views'];
                     audio.volume = 1.0;
                     callback();
                 }
-            }, 40); // 40ms interval = approx 0.4s fade out
+            }, 40);
         }
 
         function fadeInAudio() {
@@ -379,7 +457,6 @@ $views = $data['views'];
             audio.play().then(() => {
                 let fadeIn = setInterval(() => {
                     const targetVol = parseFloat(document.getElementById('vol-slider').value);
-                    // UPDATED: Faster fade in step (0.1)
                     if (audio.volume < targetVol - 0.1) {
                         audio.volume += 0.1;
                     } else {
@@ -470,7 +547,6 @@ $views = $data['views'];
             bgImage.classList.remove('active');
             bgVideo.classList.remove('active');
             
-            // UPDATED: 500ms delay matches the faster CSS transition
             const delay = isTransition ? 500 : 0; 
 
             setTimeout(() => {
@@ -478,6 +554,26 @@ $views = $data['views'];
                 document.getElementById('song-title').innerText = track.title;
                 document.getElementById('lyrics-box').innerHTML = track.lyrics;
 
+                // --- 1. RESET PFP ---
+                // Always reset to normal initially
+                pfpAlt.style.opacity = 0; 
+                if (track.title.includes('OMORI')) {
+                    pfpAlt.src = "assets/omori-emotions.gif";
+                } else {
+                    pfpAlt.src = ""; 
+                }
+
+                // --- 2. SWITCH TYPEWRITER TEXT ---
+                // CHANGED: Always start with ORIGINAL texts (0-44s will use original)
+                currentTexts = originalTexts;
+                
+                // Reset typewriter logic instantly
+                typeCount = 0;
+                typeIndex = 0;
+                isDeleting = false;
+                document.getElementById('typing').textContent = "";
+
+                // --- 3. BACKGROUND ---
                 if (track.bgType === 'video') {
                     bgVideo.src = track.bgSrc;
                     bgVideo.onloadeddata = () => {
@@ -534,11 +630,46 @@ $views = $data['views'];
             audio.volume = e.target.value;
         });
 
+        // --- TIME UPDATE & CLIMAX CHECKER ---
         audio.addEventListener('timeupdate', (e) => {
             const { duration, currentTime } = e.target;
+            const track = playlist[currentTrack];
+
             if(duration) {
                 const progressPercent = (currentTime / duration) * 100;
                 document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+            }
+
+            // CHECK FOR CLIMAX (Text & PFP Switcher)
+            if (track.title.includes('OMORI') && track.climaxTime) {
+                if (currentTime >= track.climaxTime) {
+                    // --- CLIMAX REACHED ---
+                    pfpAlt.style.opacity = 1; // Show Omori PFP
+                    
+                    // Switch Text if not already switched
+                    if(currentTexts !== omoriTexts) {
+                        currentTexts = omoriTexts;
+                        // Reset typewriter so it starts fresh with Omori text
+                        typeCount = 0;
+                        typeIndex = 0;
+                        isDeleting = false;
+                        document.getElementById('typing').textContent = "";
+                    }
+
+                } else {
+                    // --- BEFORE CLIMAX ---
+                    pfpAlt.style.opacity = 0; // Show Normal PFP
+                    
+                    // Keep Original Text
+                    if(currentTexts !== originalTexts) {
+                        currentTexts = originalTexts;
+                        // Reset typewriter
+                        typeCount = 0;
+                        typeIndex = 0;
+                        isDeleting = false;
+                        document.getElementById('typing').textContent = "";
+                    }
+                }
             }
         });
         
@@ -564,7 +695,7 @@ $views = $data['views'];
             setTimeout(() => document.getElementById('overlay').style.display = 'none', 800);
             document.getElementById('main-card').style.opacity = '1';
             loadTrack(0, false); 
-            startTypewriter();
+            startTypewriter(); // Start the loop
         });
 
         if (window.matchMedia("(hover: hover)").matches) {
@@ -579,24 +710,28 @@ $views = $data['views'];
             });
         }
 
+        // --- NEW TYPEWRITER LOGIC ---
         function startTypewriter() {
-            const texts = ["Stay with me for a while", "Let's make memories together", "I'm here for you", "Take my hand", "Please Don't give up", "you can endure it", "I can help you", "Please believe in me", "please....", "I'm....", "sorry..."];
-            let count = 0; 
-            let index = 0; 
-            let currentText = ""; 
-            let isDeleting = false;
-
             (function type() {
-                if (count === texts.length) count = 0;
-                currentText = texts[count];
-                if (isDeleting) index--; else index++;
-                document.getElementById('typing').textContent = currentText.slice(0, index);
+                // Use the GLOBAL currentTexts array
+                if (typeCount >= currentTexts.length) typeCount = 0;
+                
+                currentText = currentTexts[typeCount];
+                
+                if (isDeleting) typeIndex--; else typeIndex++;
+                
+                document.getElementById('typing').textContent = currentText.slice(0, typeIndex);
+                
                 let typeSpeed = 100;
                 if (isDeleting) typeSpeed = 50;
-                if (!isDeleting && index === currentText.length) {
-                    typeSpeed = 2000; isDeleting = true;
-                } else if (isDeleting && index === 0) {
-                    isDeleting = false; count++; typeSpeed = 500;
+                
+                if (!isDeleting && typeIndex === currentText.length) {
+                    typeSpeed = 2000; 
+                    isDeleting = true;
+                } else if (isDeleting && typeIndex === 0) {
+                    isDeleting = false; 
+                    typeCount++; 
+                    typeSpeed = 500;
                 }
                 setTimeout(type, typeSpeed);
             }());
